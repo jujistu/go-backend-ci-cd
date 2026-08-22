@@ -81,21 +81,19 @@ func ParseByteArray(r []byte, x interface{}) error {
 }
 
 func TestHelper(t *testing.T) {
-    err := godotenv.Load("../.env.testing")
-    if err != nil {
-        t.Fatalf("failed to load .env.testing: %v", err)
+    if err := godotenv.Load("../.env.testing"); err != nil {
+        t.Log("No .env.testing found; using environment variables")
     }
 
     config.ConnectDB()
 
     db := config.GetDB()
-    err = db.AutoMigrate(
+
+    if err := db.AutoMigrate(
         &models.User{},
         &models.ChatRoom{},
         &models.Chat{},
-    )
-
-    if err != nil {
+    ); err != nil {
         t.Fatalf("failed to migrate test database: %v", err)
     }
 }

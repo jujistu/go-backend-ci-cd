@@ -1,0 +1,145 @@
+name: Phase 1 - CI Security & Tests
+
+on:
+    pull_request:
+    push:
+        branches:
+            - main
+
+permissions:
+    contents: read
+
+concurrency:
+    group: phase1-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    # ============================================================
+    # SECRET SCANNING
+    # ============================================================
+    secret-scan:
+        name: Secret Scan
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+
+            - name: Run Gitleaks
+              uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # ============================================================
+    # TRIVY FILESYSTEM SCAN
+    # ============================================================
+    trivy-fs:
+        name: Trivy Filesystem Scan
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+              with:
+                  persist-credentials: false
+
+            - name: Run Trivy filesystem scan
+              uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
+              with:
+                  scan-type: fs
+                  scan-ref: .
+                  scanners: vuln,misconfig,secret
+                  severity: HIGH,CRITICAL
+                  ignore-unfixed: true
+                  exit-code: 1
+
+    # ============================================================
+    # GO VET
+    # ============================================================
+    go-vet:
+        name: Go Vet
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+              with:
+                  persist-credentials: false
+
+            - name: Setup Go
+              uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+              with:
+                  go-version-file: go.mod
+                  cache: true
+
+            - name: Download Go dependencies
+              run: go mod download
+
+            - name: Run go vet
+              run: go vet ./...
+
+    # ============================================================
+    # GO TESTS
+    # ============================================================
+    go-test:
+        name: Go Tests
+        runs-on: ubuntu-latest
+
+        services:
+            mysql:
+                image: mysql:8.0
+
+                env:
+                    MYSQL_ROOT_PASSWORD: root
+                    MYSQL_DATABASE: gochat_test
+                    MYSQL_USER: gochat
+                    MYSQL_PASSWORD: gochat
+
+                ports:
+                    - 3306:3306
+
+                options: >-
+                    --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+                    --health-interval=10s
+                    --health-timeout=5s
+                    --health-retries=10
+
+        env:
+            # Test database
+            DB_CONNECTION: mysql
+            DB_HOST: 127.0.0.1
+            DB_PORT: 3306
+            DB_DATABASE: gochat_test
+            DB_USERNAME: gochat
+            DB_PASSWORD: gochat
+            DB_PROTOCOL: tcp
+
+            # Test JWT
+            JWT_SECRET: ci-test-secret
+            JWT_TTL: 24h
+
+            # Application configuration
+            LOG_TO_FILE: "false"
+            LOG_PANIC_TRACE: "false"
+            CORS_DEBUG: "false"
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+              with:
+                  persist-credentials: false
+
+            - name: Setup Go
+              uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+              with:
+                  go-version-file: go.mod
+                  cache: true
+
+            - name: Download Go dependencies
+              run: go mod download
+
+            - name: Run Go tests
+              run: go test ./... -v
