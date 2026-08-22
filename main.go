@@ -88,6 +88,15 @@ func run() error {
 	// Start api server
 	port := os.Getenv("PORT")
 	level.Info(logger).Log("Server", "starting", "port", port)
-	err = http.ListenAndServe(fmt.Sprintf(":%s", port), handler)
+	server := &http.Server{
+		Addr:              fmt.Sprintf(":%s", port),
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	err = server.ListenAndServe()
 	return err
 }

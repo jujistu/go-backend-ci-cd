@@ -50,6 +50,11 @@ func (c *Client) Read(bodyChan chan []byte) {
 		if strings.Index(body.ChatMessage, "/stock=") == 0 {
 			bodyChan <- p
 		} else {
+			if body.ChatRoomId < 0 {
+				log.Printf("invalid chat room ID: %d", body.ChatRoomId)
+				continue
+			}
+
 			var chatSaver services.ChatSaver = services.NewChatService()
 			go chatSaver.SaveChatMessage(body.ChatMessage, uint(body.ChatRoomId), c.UserID)
 		}

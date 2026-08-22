@@ -54,7 +54,7 @@ func (a *auth) Login(email, password string) (responses.LoginResponse, error) {
 	tokenString, err2 := token.SignedString([]byte(jwtSecret))
 	errors.ErrorCheck(err2)
 
-	return responses.LoginResponse{User: user, JwtToken: tokenString}, nil
+	return responses.LoginResponse{User: user, Token: tokenString}, nil
 }
 
 func (a *auth) SignUp(email, userName, password string) (responses.SignUpResponse, error) {
@@ -96,6 +96,6 @@ func (a *auth) SignUp(email, userName, password string) (responses.SignUpRespons
 	tokenString, err2 := token.SignedString([]byte(jwtSecret))
 	errors.ErrorCheck(err2)
 
-	return responses.SignUpResponse{User: user, JwtToken: tokenString}, nil
+	return responses.SignUpResponse{User: user, Token: tokenString}, nil
 
 }

@@ -3,6 +3,6 @@ package responses
 import "github.com/ong-gtp/go-chat/models"
 
 type LoginResponse struct {
-	User     models.User `json:"User"`
-	JwtToken string      `json:"Token"`
+	User  models.User `json:"User"`
+	Token string      `json:"Token"`
 }

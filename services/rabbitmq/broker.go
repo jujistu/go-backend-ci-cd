@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"context"
 	"log"
+	"math"
 	"os"
 	"time"
 
@@ -127,6 +128,11 @@ func processResponse(s <-chan StockResponse, b *Broker, pool *websocket.Pool) {
 		sr := StockResponse{
 			RoomId:  r.RoomId,
 			Message: r.Message,
+		}
+
+		if sr.RoomId > math.MaxInt32 {
+			log.Printf("invalid chat room ID: %d", sr.RoomId)
+			continue
 		}
 
 		message := websocket.Message{Type: 1, Body: websocket.Body{ChatRoomId: int32(sr.RoomId), ChatUser: "stock-bot", ChatMessage: sr.Message}}
