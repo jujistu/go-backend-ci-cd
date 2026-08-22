@@ -3,8 +3,8 @@ package utils
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
+	"testing"
 
 	"github.com/joho/godotenv"
 	"github.com/ong-gtp/go-chat/config"
@@ -80,12 +80,22 @@ func ParseByteArray(r []byte, x interface{}) error {
 	return nil
 }
 
-func TestHelper() {
-	err := godotenv.Load("../.env.testing")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-	config.ConnectDB()
-	db := config.GetDB()
-	db.AutoMigrate(&models.User{}, &models.ChatRoom{}, &models.Chat{})
+func TestHelper(t *testing.T) {
+    err := godotenv.Load("../.env.testing")
+    if err != nil {
+        t.Fatalf("failed to load .env.testing: %v", err)
+    }
+
+    config.ConnectDB()
+
+    db := config.GetDB()
+    err = db.AutoMigrate(
+        &models.User{},
+        &models.ChatRoom{},
+        &models.Chat{},
+    )
+
+    if err != nil {
+        t.Fatalf("failed to migrate test database: %v", err)
+    }
 }

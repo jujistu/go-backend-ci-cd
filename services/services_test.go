@@ -8,7 +8,7 @@ import (
 )
 
 func TestChatService(t *testing.T) {
-	utils.TestHelper()
+	utils.TestHelper(t)
 
 	service := NewChatService()
 	t.Run("ChatRooms Test", func(t *testing.T) {
