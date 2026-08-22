@@ -28,10 +28,8 @@ func main() {
 
 func run() error {
 	// Load env values
-	err := godotenv.Load()
-	if err != nil {
-		stdlog.Println("Error loading .env file")
-		return err
+	if err := godotenv.Load(); err != nil {
+		stdlog.Println("No .env file found; using environment variables")
 	}
 
 	// Logging setup
@@ -97,6 +95,8 @@ func run() error {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	err = server.ListenAndServe()
-	return err
+	if err := server.ListenAndServe(); err != nil {
+		return err
+	}
+	return nil	
 }
