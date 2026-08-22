@@ -1,6 +1,6 @@
 module github.com/ong-gtp/go-chat
 
-go 1.25.0
+go 1.25.8
 
 require (
 	github.com/go-kit/log v0.2.1

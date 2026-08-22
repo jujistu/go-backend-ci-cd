@@ -45,30 +45,28 @@ jobs:
               run: go mod download
 
             # ----------------------------------------------------
-            # GOSEC
+            # GOSEC - GO STATIC APPLICATION SECURITY TESTING
             # ----------------------------------------------------
-            - name: Install Gosec
-              run: |
-                  go install github.com/securego/gosec/v2/cmd/gosec@v2.28.0
-
             - name: Run Gosec
-              run: |
-                  "$(go env GOPATH)/bin/gosec" \
-                    -fmt sarif \
-                    -out gosec-results.sarif \
-                    -exclude-generated \
-                    -severity medium \
-                    -confidence medium \
-                    ./...
+              uses: securego/gosec@603c0aefdd7112af1dd8884e40f9c3a2d90a105a
+              with:
+                  args: >-
+                      -fmt sarif
+                      -out gosec-results.sarif
+                      -exclude-generated
+                      -severity medium
+                      -confidence medium
+                      ./...
 
             - name: Upload Gosec SARIF
-              if: always()
+              if: always() && hashFiles('gosec-results.sarif') != ''
               uses: github/codeql-action/upload-sarif@c54b30b7df092240050e69945842bc67aee0f0f4
               with:
                   sarif_file: gosec-results.sarif
+                  category: gosec
 
             # ----------------------------------------------------
-            # GOVULNCHECK
+            # GOVULNCHECK - GO VULNERABILITY ANALYSIS
             # ----------------------------------------------------
             - name: Run Govulncheck
               uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f
@@ -113,6 +111,7 @@ jobs:
     # The same local image is used for:
     #   1. Trivy vulnerability scan
     #   2. SBOM generation
+    #   3. Trivy JSON report
     #
     # The image is NOT pushed in Phase 2.
     # ============================================================
@@ -155,7 +154,7 @@ jobs:
                   format: table
 
             # ----------------------------------------------------
-            # GENERATE SBOM
+            # GENERATE CYCLONEDX SBOM
             # ----------------------------------------------------
             - name: Generate CycloneDX SBOM
               uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
@@ -167,9 +166,9 @@ jobs:
                   exit-code: 0
 
             # ----------------------------------------------------
-            # GENERATE SECURITY REPORT
+            # GENERATE TRIVY JSON REPORT
             #
-            # This does NOT determine pass/fail.
+            # This report does NOT determine pass/fail.
             # The previous Trivy step is the security gate.
             # ----------------------------------------------------
             - name: Generate Trivy JSON report
