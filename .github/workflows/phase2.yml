@@ -65,6 +65,14 @@ jobs:
                   sarif_file: gosec-results.sarif
                   category: gosec
 
+            - name: Upload Gosec report
+              if: always() && hashFiles('gosec-results.sarif') != ''
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+              with:
+                  name: gosec-results-${{ github.sha }}
+                  path: gosec-results.sarif
+                  retention-days: 30
+
             # ----------------------------------------------------
             # GOVULNCHECK - GO VULNERABILITY ANALYSIS
             # ----------------------------------------------------
