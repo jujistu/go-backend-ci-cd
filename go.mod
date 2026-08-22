@@ -1,6 +1,6 @@
 module github.com/ong-gtp/go-chat
 
-go 1.19
+go 1.25.0
 
 require (
 	github.com/go-kit/log v0.2.1
@@ -12,7 +12,7 @@ require (
 	github.com/rabbitmq/amqp091-go v1.14.0
 	github.com/rs/cors v1.8.2
 	github.com/stretchr/testify v1.12.1
-	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd
+	golang.org/x/crypto v0.55.0
 	gorm.io/driver/mysql v1.4.4
 	gorm.io/gorm v1.24.1
 )
