@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
   security-events: write
+  packages: write
 
 concurrency:
   group: phase2-${{ github.workflow }}-${{ github.ref }}
@@ -237,3 +238,32 @@ jobs:
             trivy-image-results.json
           if-no-files-found: error
           retention-days: 30
+
+      # ----------------------------------------------------
+      # LOGIN TO GHCR
+      # ----------------------------------------------------
+      - name: Login to GitHub Container Registry
+        if: success()
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ----------------------------------------------------
+      # PUSH VALIDATED IMAGE
+      # ----------------------------------------------------
+      - name: Push image to GHCR
+        if: success()
+        run: |
+          set -euo pipefail
+
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+          echo "Pushing ${IMAGE}"
+
+          docker tag \
+            "${IMAGE_NAME}:${IMAGE_TAG}" \
+            "${IMAGE}"
+
+          docker push "${IMAGE}"
