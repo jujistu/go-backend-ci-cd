@@ -78,3 +78,5 @@ Run the command below to execute tests
 - https://blog.questionable.services/article/guide-logging-middleware-go/
 - https://gorm.io
 - https://stackoverflow.com/questions/47637308/create-unit-test-for-ws-in-golang
+
+<!-- CI artifact promotion test -->
