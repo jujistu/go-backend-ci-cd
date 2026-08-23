@@ -148,6 +148,25 @@ jobs:
             ${{ env.IMAGE_NAME }}:ci
           provenance: false
 
+      - name: Install Trivy
+        run: |
+          set -euo pipefail
+
+          TRIVY_VERSION="0.74.0"
+          TRIVY_SHA256="2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a"
+
+          curl -fsSL \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+            -o /tmp/trivy.tar.gz
+
+          echo "${TRIVY_SHA256}  /tmp/trivy.tar.gz" | sha256sum -c -
+
+          tar -xzf /tmp/trivy.tar.gz -C /tmp
+
+          sudo install -m 0755 /tmp/trivy /usr/local/bin/trivy
+
+          trivy --version
+
       - name: Verify container security configuration
         run: |
           USER="$(docker image inspect ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --format '{{.Config.User}}')"
@@ -166,26 +185,25 @@ jobs:
       # TRIVY CONTAINER SECURITY GATE
       # ----------------------------------------------------
       - name: Scan container image with Trivy
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          scanners: vuln,misconfig,secret
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: 1
-          format: table
+        run: |
+          trivy image \
+            --scanners vuln,misconfig,secret \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            --format table \
+            "${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
 
       # ----------------------------------------------------
       # GENERATE CYCLONEDX SBOM
       # ----------------------------------------------------
       - name: Generate CycloneDX SBOM
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          scanners: vuln
-          format: cyclonedx
-          output: sbom.cdx.json
-          exit-code: 0
+        run: |
+          trivy image \
+            --scanners vuln \
+            --format cyclonedx \
+            --output sbom.cdx.json \
+            "${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
 
       # ----------------------------------------------------
       # GENERATE TRIVY JSON REPORT
@@ -194,15 +212,14 @@ jobs:
       # The previous Trivy step is the security gate.
       # ----------------------------------------------------
       - name: Generate Trivy JSON report
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          scanners: vuln,misconfig,secret
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          format: json
-          output: trivy-image-results.json
-          exit-code: 0
+        run: |
+          trivy image \
+            --scanners vuln,misconfig,secret \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --format json \
+            --output trivy-image-results.json \
+            "${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
 
       # ----------------------------------------------------
       # UPLOAD SECURITY ARTIFACTS
