@@ -1,205 +1,219 @@
 name: Phase 2 - SAST, Container Security & SBOM
 
 on:
-    pull_request:
-    push:
-        branches:
-            - master
+  pull_request:
+  push:
+    branches:
+      - master
 
 permissions:
-    contents: read
-    security-events: write
+  contents: read
+  security-events: write
 
 concurrency:
-    group: phase2-${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: phase2-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-    GOFLAGS: -mod=readonly
-    IMAGE_NAME: gochatapp
-    IMAGE_TAG: ${{ github.sha }}
+  GOFLAGS: -mod=readonly
+  IMAGE_NAME: gochatapp
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-    # ============================================================
-    # GO SECURITY ANALYSIS
-    # ============================================================
-    go-security:
-        name: Go Security Analysis
-        runs-on: ubuntu-latest
-        timeout-minutes: 15
+  # ============================================================
+  # GO SECURITY ANALYSIS
+  # ============================================================
+  go-security:
+    name: Go Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-              with:
-                  fetch-depth: 0
-                  persist-credentials: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-            - name: Setup Go
-              uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
-              with:
-                  go-version-file: go.mod
-                  cache: true
+      - name: Setup Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
 
-            - name: Download Go dependencies
-              run: go mod download
+      - name: Download Go dependencies
+        run: go mod download
 
-            # ----------------------------------------------------
-            # GOSEC - GO STATIC APPLICATION SECURITY TESTING
-            # ----------------------------------------------------
-            - name: Run Gosec
-              uses: securego/gosec@603c0aefdd7112af1dd8884e40f9c3a2d90a105a
-              with:
-                  args: >-
-                      -fmt sarif
-                      -out gosec-results.sarif
-                      -exclude-generated
-                      -severity medium
-                      -confidence medium
-                      ./...
+      # ----------------------------------------------------
+      # GOSEC - GO STATIC APPLICATION SECURITY TESTING
+      # ----------------------------------------------------
+      - name: Run Gosec
+        uses: securego/gosec@bfec35a303e24e2a929b586822eca8486accc670 # v2.22.10
+        with:
+          args: >-
+            -fmt sarif
+            -out gosec-results.sarif
+            -exclude-generated
+            -severity medium
+            -confidence medium
+            ./...
 
-            - name: Upload Gosec SARIF
-              if: always() && hashFiles('gosec-results.sarif') != ''
-              uses: github/codeql-action/upload-sarif@c54b30b7df092240050e69945842bc67aee0f0f4
-              with:
-                  sarif_file: gosec-results.sarif
-                  category: gosec
+      - name: Upload Gosec SARIF
+        if: always() && hashFiles('gosec-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@c54b30b7df092240050e69945842bc67aee0f0f4
+        with:
+          sarif_file: gosec-results.sarif
+          category: gosec
 
-            - name: Upload Gosec report
-              if: always() && hashFiles('gosec-results.sarif') != ''
-              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-              with:
-                  name: gosec-results-${{ github.sha }}
-                  path: gosec-results.sarif
-                  retention-days: 30
+      - name: Upload Gosec report
+        if: always() && hashFiles('gosec-results.sarif') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: gosec-results-${{ github.sha }}
+          path: gosec-results.sarif
+          retention-days: 30
 
-            # ----------------------------------------------------
-            # GOVULNCHECK - GO VULNERABILITY ANALYSIS
-            # ----------------------------------------------------
-            - name: Run Govulncheck
-              uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f
-              with:
-                  go-version-file: go.mod
-                  go-package: ./...
+      # ----------------------------------------------------
+      # GOVULNCHECK - GO VULNERABILITY ANALYSIS
+      # ----------------------------------------------------
+      - name: Run Govulncheck
+        uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f
+        with:
+          go-version-file: go.mod
+          go-package: ./...
 
-    # ============================================================
-    # CODEQL
-    # ============================================================
-    codeql:
-        name: CodeQL SAST
-        runs-on: ubuntu-latest
-        timeout-minutes: 20
+  # ============================================================
+  # CODEQL
+  # ============================================================
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-              with:
-                  persist-credentials: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
 
-            - name: Initialize CodeQL
-              uses: github/codeql-action/init@c54b30b7df092240050e69945842bc67aee0f0f4
-              with:
-                  languages: go
-                  build-mode: autobuild
-                  queries: security-extended
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@c54b30b7df092240050e69945842bc67aee0f0f4
+        with:
+          languages: go
+          build-mode: autobuild
+          queries: security-extended
 
-            - name: Autobuild
-              uses: github/codeql-action/autobuild@c54b30b7df092240050e69945842bc67aee0f0f4
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@c54b30b7df092240050e69945842bc67aee0f0f4
 
-            - name: Analyze with CodeQL
-              uses: github/codeql-action/analyze@c54b30b7df092240050e69945842bc67aee0f0f4
-              with:
-                  category: /language:go
+      - name: Analyze with CodeQL
+        uses: github/codeql-action/analyze@c54b30b7df092240050e69945842bc67aee0f0f4
+        with:
+          category: /language:go
 
-    # ============================================================
-    # BUILD + CONTAINER SECURITY + SBOM
-    #
-    # The Docker image is built exactly ONCE.
-    #
-    # The same local image is used for:
-    #   1. Trivy vulnerability scan
-    #   2. SBOM generation
-    #   3. Trivy JSON report
-    #
-    # The image is NOT pushed in Phase 2.
-    # ============================================================
-    container-security:
-        name: Build, Scan & SBOM
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
+  # ============================================================
+  # BUILD + CONTAINER SECURITY + SBOM
+  #
+  # The Docker image is built exactly ONCE.
+  #
+  # The same local image is used for:
+  #   1. Trivy vulnerability scan
+  #   2. SBOM generation
+  #   3. Trivy JSON report
+  #
+  # The image is NOT pushed in Phase 2.
+  # ============================================================
+  container-security:
+    name: Build, Scan & SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-              with:
-                  persist-credentials: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
 
-            # ----------------------------------------------------
-            # BUILD IMAGE ONCE
-            # ----------------------------------------------------
-            - name: Build Docker image
-              uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
-              with:
-                  context: .
-                  push: false
-                  load: true
-                  tags: |
-                      ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-                      ${{ env.IMAGE_NAME }}:ci
-                  provenance: false
+      # ----------------------------------------------------
+      # BUILD IMAGE ONCE
+      # ----------------------------------------------------
+      - name: Build Docker image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          push: false
+          load: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:ci
+          provenance: false
 
-            # ----------------------------------------------------
-            # TRIVY CONTAINER SECURITY GATE
-            # ----------------------------------------------------
-            - name: Scan container image with Trivy
-              uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
-              with:
-                  image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-                  scanners: vuln,misconfig,secret
-                  severity: HIGH,CRITICAL
-                  ignore-unfixed: true
-                  exit-code: 1
-                  format: table
+      - name: Verify container security configuration
+        run: |
+          USER="$(docker image inspect ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --format '{{.Config.User}}')"
+          CMD="$(docker image inspect ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --format '{{json .Config.Cmd}}')"
+          PORTS="$(docker image inspect ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --format '{{json .Config.ExposedPorts}}')"
 
-            # ----------------------------------------------------
-            # GENERATE CYCLONEDX SBOM
-            # ----------------------------------------------------
-            - name: Generate CycloneDX SBOM
-              uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
-              with:
-                  image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-                  scanners: vuln
-                  format: cyclonedx
-                  output: sbom.cdx.json
-                  exit-code: 0
+          echo "User: $USER"
+          echo "Cmd: $CMD"
+          echo "Ports: $PORTS"
 
-            # ----------------------------------------------------
-            # GENERATE TRIVY JSON REPORT
-            #
-            # This report does NOT determine pass/fail.
-            # The previous Trivy step is the security gate.
-            # ----------------------------------------------------
-            - name: Generate Trivy JSON report
-              uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
-              with:
-                  image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-                  scanners: vuln,misconfig,secret
-                  severity: HIGH,CRITICAL
-                  ignore-unfixed: true
-                  format: json
-                  output: trivy-image-results.json
-                  exit-code: 0
+          test "$USER" = "appuser"
+          test "$CMD" = '["./gochatapp"]'
+          echo "$PORTS" | grep -q '9010/tcp'
 
-            # ----------------------------------------------------
-            # UPLOAD SECURITY ARTIFACTS
-            # ----------------------------------------------------
-            - name: Upload SBOM and Trivy report
-              if: always()
-              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-              with:
-                  name: container-security-${{ github.sha }}
-                  path: |
-                      sbom.cdx.json
-                      trivy-image-results.json
-                  if-no-files-found: error
-                  retention-days: 30
+      # ----------------------------------------------------
+      # TRIVY CONTAINER SECURITY GATE
+      # ----------------------------------------------------
+      - name: Scan container image with Trivy
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          scanners: vuln,misconfig,secret
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+          format: table
+
+      # ----------------------------------------------------
+      # GENERATE CYCLONEDX SBOM
+      # ----------------------------------------------------
+      - name: Generate CycloneDX SBOM
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          scanners: vuln
+          format: cyclonedx
+          output: sbom.cdx.json
+          exit-code: 0
+
+      # ----------------------------------------------------
+      # GENERATE TRIVY JSON REPORT
+      #
+      # This report does NOT determine pass/fail.
+      # The previous Trivy step is the security gate.
+      # ----------------------------------------------------
+      - name: Generate Trivy JSON report
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          scanners: vuln,misconfig,secret
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: trivy-image-results.json
+          exit-code: 0
+
+      # ----------------------------------------------------
+      # UPLOAD SECURITY ARTIFACTS
+      # ----------------------------------------------------
+      - name: Upload SBOM and Trivy report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: container-security-${{ github.sha }}
+          path: |
+            sbom.cdx.json
+            trivy-image-results.json
+          if-no-files-found: error
+          retention-days: 30
