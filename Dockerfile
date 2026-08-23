@@ -3,7 +3,7 @@
 ####################################################################
 FROM golang:alpine AS builder
 
-LABEL MAINTAINER="georgetheprogrammer@gmail.com"
+LABEL MAINTAINER="obiorapaschalugwu@gmail.com"
 
 WORKDIR /go/src/github.com/ong-gtp/go-chat
 
@@ -39,8 +39,8 @@ WORKDIR /app
 # Copy application binary
 COPY --from=builder /go/src/github.com/ong-gtp/go-chat/gochatapp ./gochatapp
 
-# Ensure the application belongs to the non-root user
-RUN chown appuser:appgroup /app/gochatapp
+# Allow the non-root application user to write runtime logs
+RUN chown -R appuser:appgroup /app
 
 # Run container as non-root user
 USER appuser
