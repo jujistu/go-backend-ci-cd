@@ -47,15 +47,18 @@ jobs:
       # ----------------------------------------------------
       # GOSEC - GO STATIC APPLICATION SECURITY TESTING
       # ----------------------------------------------------
+      - name: Install Gosec
+        run: |
+          GOTOOLCHAIN=local go install github.com/securego/gosec/v2/cmd/gosec@v2.22.10
+
       - name: Run Gosec
-        uses: securego/gosec@bfec35a303e24e2a929b586822eca8486accc670 # v2.22.10
-        with:
-          args: >-
-            -fmt sarif
-            -out gosec-results.sarif
-            -exclude-generated
-            -severity medium
-            -confidence medium
+        run: |
+          "$(go env GOPATH)/bin/gosec" \
+            -fmt sarif \
+            -out gosec-results.sarif \
+            -exclude-generated \
+            -severity medium \
+            -confidence medium \
             ./...
 
       - name: Upload Gosec SARIF
