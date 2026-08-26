@@ -5,13 +5,12 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	"github.com/ong-gtp/go-chat/utils/errors"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 var br Broker
 
-func InitilizeBroker(logger log.Logger) (*amqp.Connection, *amqp.Channel) {
+func InitializeBroker(logger log.Logger) (*amqp.Connection, *amqp.Channel, error) {
 	level.Info(logger).Log("RabbitMQ ", "connecting")
 
 	rmqHost := os.Getenv("RMQ_HOST")
@@ -21,14 +20,19 @@ func InitilizeBroker(logger log.Logger) (*amqp.Connection, *amqp.Channel) {
 	dsn := "amqp://" + rmqUserName + ":" + rmqPassword + "@" + rmqHost + ":" + rmqPort + "/"
 
 	conn, err := amqp.Dial(dsn)
-	errors.ErrorCheck(err)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	ch, err := conn.Channel()
-	errors.ErrorCheck(err)
+	if err != nil {
+		conn.Close()
+		return nil, nil, err
+	}
 
-	br.SetUp(ch)
+	br.SetUp(conn, ch)
 	level.Info(logger).Log("RabbitMQ ", "connected")
-	return conn, ch
+	return conn, ch, nil
 }
 
 func GetRabbitMQBroker() *Broker {

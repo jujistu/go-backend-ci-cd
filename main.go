@@ -55,13 +55,22 @@ func run() error {
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "loc", log.DefaultCaller)
 
 	// Setup Database and migrate models
-	config.ConnectDB()
+	if err := config.ConnectDB(); err != nil {
+		return fmt.Errorf("database connection failed: %w", err)
+	}
+
 	db := config.GetDB()
-	db.AutoMigrate(models.Tables...)
+
+	if err := db.AutoMigrate(models.Tables...); err != nil {
+		return fmt.Errorf("database migration failed: %w", err)
+	}
 	level.Info(logger).Log("Database", "migrated")
 
 	// Connect Rabbit MQ
-	conn, ch := rabbitmq.InitilizeBroker(logger)
+	conn, ch, err := rabbitmq.InitializeBroker(logger)
+	if err != nil {
+		return fmt.Errorf("rabbitmq connection failed: %w", err)
+	}
 	defer conn.Close()
 	defer ch.Close()
 
@@ -77,6 +86,7 @@ func run() error {
 	routes.RegisterAuthRoutes(r)
 	routes.RegisterChatRoutes(r)
 	routes.RegisterWebsocketRoute(r)
+	routes.RegisterHealthRoutes(r)
 
 	// Wrap routes with logging and cors middlewares
 	loggingMiddleware := middlewares.LoggingMiddleware(logger)
@@ -98,5 +108,5 @@ func run() error {
 	if err := server.ListenAndServe(); err != nil {
 		return err
 	}
-	return nil	
+	return nil
 }

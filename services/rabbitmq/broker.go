@@ -26,11 +26,12 @@ type StockResponse struct {
 type Broker struct {
 	ReceiverQueue  amqp.Queue
 	PublisherQueue amqp.Queue
+	Connection     *amqp.Connection
 	Channel        *amqp.Channel
 }
 
 // Setup creates(or connects if not existing) the reciever and publisher queues
-func (b *Broker) SetUp(ch *amqp.Channel) {
+func (b *Broker) SetUp(conn *amqp.Connection, ch *amqp.Channel) {
 	receiverQueue := os.Getenv("STKBT_RECEIVER_QUEUE")
 	publisherQueue := os.Getenv("STKBT_PUBLISHER_QUEUE")
 
@@ -57,6 +58,14 @@ func (b *Broker) SetUp(ch *amqp.Channel) {
 	b.ReceiverQueue = q1
 	b.PublisherQueue = q2
 	b.Channel = ch
+	b.Connection = conn
+}
+
+func (b *Broker) Ready() bool {
+	return b.Connection != nil &&
+		!b.Connection.IsClosed() &&
+		b.Channel != nil &&
+		!b.Channel.IsClosed()
 }
 
 // PublishMessage sends messages to the stock-bot's receiver queue

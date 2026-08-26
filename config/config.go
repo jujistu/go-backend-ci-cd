@@ -6,7 +6,6 @@ import (
 	"time"
 
 	_ "github.com/jinzhu/gorm/dialects/mysql"
-	"github.com/ong-gtp/go-chat/utils/errors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -16,7 +15,7 @@ var (
 	db *gorm.DB
 )
 
-func ConnectDB() {
+func ConnectDB() error {
 	dbUserName := os.Getenv("DB_USERNAME")
 	dbUserPassword := os.Getenv("DB_PASSWORD")
 	dbProtocol := os.Getenv("DB_PROTOCOL")
@@ -37,8 +36,21 @@ func ConnectDB() {
 	dsn := dbUserName + ":" + dbUserPassword + "@" + dbProtocol + "(" + dbHost + ":" + dbPort + ")/" + dbName + "?charset=utf8mb4&parseTime=True&loc=Local"
 	d, err := gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: metricsLogger})
 
-	errors.ErrorCheck(err)
+	if err != nil {
+		return err
+	}
+
+	sqlDB, err := d.DB()
+	if err != nil {
+		return err
+	}
+
+	if err := sqlDB.Ping(); err != nil {
+		return err
+	}
+
 	db = d
+	return nil
 }
 
 func GetDB() *gorm.DB {
