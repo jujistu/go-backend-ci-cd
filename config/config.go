@@ -45,6 +45,11 @@ func ConnectDB() error {
 		return err
 	}
 
+	sqlDB.SetMaxOpenConns(25)
+    sqlDB.SetMaxIdleConns(10)
+    sqlDB.SetConnMaxLifetime(6 * time.Minute)
+    sqlDB.SetConnMaxIdleTime(1 * time.Minute)
+
 	if err := sqlDB.Ping(); err != nil {
 		return err
 	}

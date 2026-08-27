@@ -67,7 +67,7 @@ func checkDatabase(parent context.Context) bool {
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(parent, 1*time.Second)
+	ctx, cancel := context.WithTimeout(parent, 6*time.Second)
 	defer cancel()
 
 	if err := sqlDB.PingContext(ctx); err != nil {
