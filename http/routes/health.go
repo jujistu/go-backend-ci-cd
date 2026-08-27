@@ -3,7 +3,8 @@ package routes
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+
+	"log"
 	"net/http"
 	"time"
 
@@ -55,22 +56,22 @@ func checkDatabase(parent context.Context) bool {
 	db := config.GetDB()
 
 	if db == nil {
-		fmt.Println("DATABASE HEALTH CHECK FAILED: database is nil")
+		log.Println("database readiness check failed: database is nil")
 		return false
 	}
 
 	sqlDB, err := db.DB()
 
 	if err != nil {
-		fmt.Printf("DATABASE HEALTH CHECK FAILED getting sql DB: %v\n", err)
+		log.Printf("database readiness check failed getting sql DB: %v", err)
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
+	ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 	defer cancel()
 
 	if err := sqlDB.PingContext(ctx); err != nil {
-		fmt.Printf("DATABASE HEALTH CHECK FAILED pinging database: %v\n", err)
+		log.Printf("database readiness check failed: %v", err)
 		return false
 	}
 
