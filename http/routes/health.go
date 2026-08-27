@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -52,19 +53,28 @@ func readinessHandler(w http.ResponseWriter, r *http.Request) {
 
 func checkDatabase(parent context.Context) bool {
 	db := config.GetDB()
+
 	if db == nil {
+		fmt.Println("DATABASE HEALTH CHECK FAILED: database is nil")
 		return false
 	}
 
 	sqlDB, err := db.DB()
+
 	if err != nil {
+		fmt.Printf("DATABASE HEALTH CHECK FAILED getting sql DB: %v\n", err)
 		return false
 	}
 
 	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 	defer cancel()
 
-	return sqlDB.PingContext(ctx) == nil
+	if err := sqlDB.PingContext(ctx); err != nil {
+		fmt.Printf("DATABASE HEALTH CHECK FAILED pinging database: %v\n", err)
+		return false
+	}
+
+	return true
 }
 
 func statusString(ready bool) string {
