@@ -56,24 +56,31 @@ func checkDatabase(parent context.Context) bool {
 	db := config.GetDB()
 
 	if db == nil {
-		log.Println("database readiness check failed: database is nil")
+		log.Println("READINESS: database is nil")
 		return false
 	}
 
 	sqlDB, err := db.DB()
-
 	if err != nil {
-		log.Printf("database readiness check failed getting sql DB: %v", err)
+		log.Printf("READINESS: failed getting sql DB: %v", err)
 		return false
 	}
 
 	ctx, cancel := context.WithTimeout(parent, 6*time.Second)
 	defer cancel()
 
+	log.Println("READINESS: starting database ping")
+
 	if err := sqlDB.PingContext(ctx); err != nil {
-		log.Printf("database readiness check failed: %v", err)
+		log.Printf(
+			"READINESS: database ping FAILED: type=%T error=%q",
+			err,
+			err.Error(),
+		)
 		return false
 	}
+
+	log.Println("READINESS: database ping SUCCESS")
 
 	return true
 }
