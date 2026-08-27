@@ -32,7 +32,7 @@ func livenessHandler(w http.ResponseWriter, r *http.Request) {
 func readinessHandler(w http.ResponseWriter, r *http.Request) {
 	checks := make(map[string]string)
 
-	dbReady := checkDatabase(r.Context())
+	dbReady := checkDatabase()
 	checks["database"] = statusString(dbReady)
 
 	rabbitMQReady := rabbitmq.GetRabbitMQBroker().Ready()
@@ -52,24 +52,24 @@ func readinessHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func checkDatabase(parent context.Context) bool {
+func checkDatabase() bool {
 	db := config.GetDB()
 
 	if db == nil {
-		log.Println("READINESS: database is nil")
+		log.Println("database readiness check failed: database is nil")
 		return false
 	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		log.Printf("READINESS: failed getting sql DB: %v", err)
+		log.Printf("database readiness check failed getting sql DB: %v", err)
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(parent, 6*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
 	defer cancel()
 
-	log.Println("READINESS: starting database ping")
+	log.Printf("READINESS: starting database ping")
 
 	if err := sqlDB.PingContext(ctx); err != nil {
 		log.Printf(
@@ -80,8 +80,7 @@ func checkDatabase(parent context.Context) bool {
 		return false
 	}
 
-	log.Println("READINESS: database ping SUCCESS")
-
+	log.Printf("READINESS: database ping SUCCESS")
 	return true
 }
 
